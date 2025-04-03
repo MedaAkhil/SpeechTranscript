@@ -1,0 +1,105 @@
+import gradio as gr
+from transformers import pipeline
+import os   
+import shutil
+import time
+from moviepy import VideoFileClip
+import subprocess
+
+model = pipeline("automatic-speech-recognition", model="kattojuprashanth238/whisper-small-te-v10")
+
+# Define paths for storing transcripts and audio files
+transcript_file_path = "transcripts/consolidated_transcript_hcu.txt"
+transcript_file_path_video = "transcripts/consolidated_transcript_video_hcu.txt"
+audio_storage_path = "audio_files_hcu"
+video_storage_path = "video_files_hcu"
+os.makedirs("transcripts", exist_ok=True)
+os.makedirs(audio_storage_path, exist_ok=True)
+os.makedirs(video_storage_path, exist_ok=True)
+
+
+# Ensure the consolidated transcript file exists
+if not os.path.exists(transcript_file_path):
+    with open(transcript_file_path, "w", encoding="utf-8") as f:
+        f.write("")  # Create an empty file
+
+if not os.path.exists(transcript_file_path_video):
+    with open(transcript_file_path, "w", encoding="utf-8") as f:
+        f.write("")  # Create an empty file
+
+def get_unique_filename(folder, base_name, extension):
+    """Generate a unique filename by appending a timestamp if necessary."""
+    timestamp = int(time.time() * 1000)  # Milliseconds since epoch
+    unique_name = f"{base_name}_{timestamp}{extension}"
+    return os.path.join(folder, f"{base_name}_{timestamp}{extension}")
+
+def process_audio(audio, name, gender, age, selected_languages, mother_tongue, region, spoken_terms, musical_experience, study_medium):
+    if audio is None:
+        return "No audio input provided."
+    if not name or not gender or not age or not mother_tongue or not region or not spoken_terms or not study_medium:
+        return "Please provide all required details before recording."
+    
+    try:
+        base_name, extension = os.path.splitext(os.path.basename(audio))
+        saved_audio_path = get_unique_filename(audio_storage_path, base_name, extension)
+        shutil.copy(audio, saved_audio_path)
+
+
+        transcription = model(saved_audio_path, return_timestamps=True)["text"]
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        
+        line = (f"{os.path.basename(saved_audio_path)} | {timestamp} | {name} | Gender: {gender} | Age: {age} | Mother Tongue: {mother_tongue} | Region: {region} | "
+                f"Spoken Terms: {spoken_terms} | Musical Exp: {musical_experience} | Medium of Study: {study_medium} | "
+                f"Languages: {', '.join(selected_languages)} | Transcription: {transcription}\n")
+
+        with open(transcript_file_path, "a", encoding="utf-8") as f:
+            f.write(line)
+        
+        return f"Audio saved to: {saved_audio_path}\nTranscription added:\n{line.strip()}"
+    except Exception as e:
+        return f"Error processing audio: {str(e)}"
+
+def go_to_page2(name, gender, age, mother_tongue, region):
+    if not all([name, gender, age, mother_tongue, region]):
+        return gr.update(visible=True), gr.update(visible=False), "Please fill all required fields."
+    return gr.update(visible=False), gr.update(visible=True), ""
+
+def go_to_home():
+    return gr.update(visible=True), gr.update(visible=False), ""
+
+with gr.Blocks() as app:
+    name_input = gr.Textbox(label="Name")
+    gender_input = gr.Dropdown(choices=["Male", "Female", "Other"], label="Gender")
+    age_input = gr.Number(label="Age")
+    mother_tongue_input = gr.Textbox(label="Mother Tongue")
+    region_input = gr.Textbox(label="Region/Place of Living")
+    spoken_terms_input = gr.Textbox(label="Spoken Terms")
+    musical_exp_input = gr.Checkbox(label="Any experience in musical study?")
+    medium_study_input = gr.Textbox(label="Medium of Study (School, High School, UG, PG)")
+    
+    language_options = ["English", "Hindi", "Telugu", "Tamil", "Kannada", "Malayalam", "Marathi", "Bengali", "Gujarati"]
+    selected_languages = gr.Dropdown(choices=language_options, label="Select Languages You Know", multiselect=True)
+    
+    error_msg = gr.Textbox(visible=False)
+    next_btn = gr.Button("Proceed to record")
+    with gr.Column(visible=False) as page2:
+        with gr.Row():  # Row layout for side-by-side images
+            gr.Image("logo1.png", label=None, width=100, height=100, elem_id="logo1")
+            gr.Image("logo2.png", label=None, width=100, height=100, elem_id="logo2")
+        gr.Markdown("# Record Your Voice")
+        gr.Markdown("Press the button below to start recording your voice or upload an audio file.")
+        
+        with gr.Tab("Audio Upload"):
+            audio_input = gr.Audio(type="filepath", label="Upload Audio")
+            audio_output = gr.Textbox(label="Transcription Result")
+            audio_button = gr.Button("Transcribe Audio")
+            audio_button.click(process_audio, 
+                           inputs=[audio_input, name_input, gender_input, age_input, selected_languages, 
+                                   mother_tongue_input, region_input, spoken_terms_input, 
+                                   musical_exp_input, medium_study_input], 
+                           outputs=audio_output) 
+    next_btn.click(go_to_page2, inputs=[name_input, gender_input, age_input, mother_tongue_input, region_input], outputs=[page1, page2, error_msg])
+    home_btn.click(go_to_home, outputs=[page1, page2, error_msg])
+
+# Launch the app
+app.launch(share=True)

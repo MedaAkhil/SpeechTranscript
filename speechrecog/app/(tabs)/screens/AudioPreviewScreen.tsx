@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button } from 'react-native';
+import { View, Text, Button, StyleSheet } from 'react-native';
 import { Audio } from 'expo-av';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../App';
@@ -9,7 +9,7 @@ type AudioPreviewProps = {
 };
 
 export default function AudioPreviewScreen({ route }: AudioPreviewProps) {
-  const { audioURI } = route.params;
+  const { audioURI, transcript } = route.params;
   const [sound, setSound] = useState<Audio.Sound | null>(null);
 
   useEffect(() => {
@@ -17,6 +17,7 @@ export default function AudioPreviewScreen({ route }: AudioPreviewProps) {
       const { sound } = await Audio.Sound.createAsync({ uri: audioURI });
       setSound(sound);
     };
+
     loadAudio();
 
     return () => {
@@ -33,10 +34,32 @@ export default function AudioPreviewScreen({ route }: AudioPreviewProps) {
   };
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Audio Preview</Text>
-      <Text>{audioURI}</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Audio Preview</Text>
       <Button title="Play Audio" onPress={playAudio} />
+      <Text style={styles.transcriptTitle}>Transcript:</Text>
+      <Text style={styles.transcript}>{transcript}</Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 24,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 20,
+    marginBottom: 10,
+  },
+  transcriptTitle: {
+    marginTop: 20,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  transcript: {
+    marginTop: 10,
+    fontSize: 14,
+  },
+});

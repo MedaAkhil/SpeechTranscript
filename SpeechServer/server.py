@@ -1,21 +1,23 @@
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, jsonify
 import os
 import time
 import logging
 from transformers import pipeline
 from flask_cors import CORS
-from io import BytesIO
-import soundfile as sf
+from pydub import AudioSegment
 import numpy as np
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS
+CORS(app)
 
 logging.basicConfig(level=logging.DEBUG)
 
-# Load the Hugging Face Whisper model
 try:
-    model = pipeline("automatic-speech-recognition", model="kattojuprashanth238/whisper-small-te-v10")
+    model = pipeline(
+        "automatic-speech-recognition",
+        model="kattojuprashanth238/whisper-small-te-v10",
+        return_timestamps=False  # You can set this True if you want word-level timestamps
+    )
     logging.info("Whisper model loaded successfully.")
 except Exception as e:
     logging.error(f"Failed to load model: {e}")
@@ -23,7 +25,6 @@ except Exception as e:
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-from pydub import AudioSegment
 
 @app.route('/collectAudio', methods=['POST'])
 def collect_audio():
@@ -36,19 +37,18 @@ def collect_audio():
     audio_file.save(original_path)
 
     try:
-        # Convert to wav using pydub
+        # Convert to mono wav with pydub
         audio = AudioSegment.from_file(original_path)
-        audio = audio.set_channels(1)
+        audio = audio.set_channels(1).set_frame_rate(16000)  # Recommended for Whisper
         wav_path = original_path.rsplit('.', 1)[0] + '.wav'
         audio.export(wav_path, format='wav')
 
-        # Read with soundfile
-        audio_array, _ = sf.read(wav_path)
-        if len(audio_array.shape) > 1:
-            audio_array = audio_array.mean(axis=1)
+        # Convert to numpy array
+        samples = np.array(audio.get_array_of_samples()).astype(np.float32) / (1 << 15)
 
-        result = model(audio_array)
-        transcript = result["text"]
+        # Get prediction
+        result = model(samples)
+        transcript = result["text"].strip()
         logging.info(f"Transcript: {transcript}")
 
         return jsonify({"transcript": transcript}), 200

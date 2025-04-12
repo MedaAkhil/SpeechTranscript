@@ -123,6 +123,6 @@ def collect_audio():
 
 
 
-process_audio(r"C:\Users\DELL\Desktop\Hackathons\Swecha2025\pavani22.wav")
+process_audio(r"C:\Users\DELL\Desktop\outputp.wav")
 # if __name__ == '__main__':
 #     app.run(debug=True, host='0.0.0.0', use_reloader=False)

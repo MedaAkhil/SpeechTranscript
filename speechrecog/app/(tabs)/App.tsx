@@ -46,7 +46,7 @@ const StackNavigator = createStackNavigator<RootStackParamList>();
 export default function App() {
   return (
     <StackNavigator.Navigator initialRouteName="Home">
-      <StackNavigator.Screen name="Home" component={HomeScreen} />
+      <StackNavigator.Screen name="FusionThinkers" component={HomeScreen} />
       <StackNavigator.Screen name="AudioPreview" component={AudioPreviewScreen} />
     </StackNavigator.Navigator>
   );

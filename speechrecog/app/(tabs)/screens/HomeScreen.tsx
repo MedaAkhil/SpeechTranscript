@@ -80,7 +80,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       const mimeType = mime.getType(audioURI) || 'audio/mpeg';
       const fileExtension = mime.getExtension(mimeType) || 'mp3';
   
-      // ✅ Declare formData here
       const formData = new FormData();
   
       formData.append('audio', {
@@ -103,11 +102,12 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         throw new Error(responseData.error || 'Transcription failed');
       }
   
-      const transcript = responseData.transcript;
+      const { transcript, waveform } = responseData;
   
       navigation.navigate('AudioPreview', {
         audioURI,
         transcript,
+        waveform, // ✅ make sure your backend sends this!
       });
   
     } catch (error: any) {
@@ -116,16 +116,17 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       setIsLoading(false);
     }
   };
-
-
-
-
-
-
-
-
-
   
+
+
+
+
+
+
+
+
+
+
   
 
   return (
